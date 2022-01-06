@@ -1,0 +1,81 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "adf-WBC-Data-Analytics-Prod"
+		},
+		"AzureDataLake_FinanceFiles_accountKey": {
+			"value": ""
+		},
+		"AzureSqlDatabase_FactalData_connectionString": {
+			"value": ""
+		},
+		"DynamicAzureSqlDatabase_connectionString": {
+			"value": ""
+		},
+		"DynamicSqlServer_connectionString": {
+			"value": ""
+		},
+		"sqldb_WBC_Data_Analytics_connectionString": {
+			"value": ""
+		},
+		"stwbcdataanalytics_accountKey": {
+			"value": ""
+		},
+		"tempFactalData_connectionString": {
+			"value": ""
+		},
+		"ADFControlAKV_properties_typeProperties_baseUrl": {
+			"value": "https://kv-factaldata.vault.azure.net/"
+		},
+		"AzureDataLakeStorage_properties_typeProperties_url": {
+			"value": "https://stdatateamshared01.dfs.core.windows.net"
+		},
+		"AzureDataLake_FinanceFiles_properties_typeProperties_url": {
+			"value": "https://sacfactaldata01.dfs.core.windows.net"
+		},
+		"AzureStorageAccount_properties_typeProperties_url": {
+			"value": "https://stdatateamdev01.dfs.core.windows.net"
+		},
+		"DynamicDynamics_properties_typeProperties_username": {
+			"value": "svc_D365MDP@mencap.org.uk"
+		},
+		"DynamicFileSystem_properties_typeProperties_host": {
+			"value": "C:\\Users\\david\\OneDrive - Factal Data Limited\\Documents\\Finance"
+		},
+		"DynamicFileSystem_properties_typeProperties_userId": {
+			"value": "david@brinn.co.uk"
+		},
+		"DynamicRestService_properties_typeProperties_url": {
+			"value": "@{linkedService().BaseURL}"
+		},
+		"DynamicRestService_properties_typeProperties_userName": {
+			"value": "@{linkedService().UserName}"
+		},
+		"DynamicSqlServer_properties_typeProperties_userName": {
+			"value": "RMS\\JS145336"
+		},
+		"SurfaceFiles_properties_typeProperties_host": {
+			"value": "C:\\Users\\david\\OneDrive - Factal Data Limited\\Documents\\Finance"
+		},
+		"SurfaceFiles_properties_typeProperties_userId": {
+			"value": "david@brinn.co.uk"
+		},
+		"WebTable_properties_typeProperties_url": {
+			"value": "https://www.caravanclub.co.uk/uk-holidays/uk-search-and-book/certificated-locations/search/?Name=&SiteContentId=&County=&Town=&Postcode=&LatLong=&p=1"
+		},
+		"kv_WBC_DataAnalytics_properties_typeProperties_baseUrl": {
+			"value": "@{linkedService().KeyVaultName}"
+		},
+		"stwbcdataanalytics_properties_typeProperties_url": {
+			"value": "https://stwbcdataanalyticsprod.dfs.core.windows.net"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
