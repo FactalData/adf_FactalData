@@ -1,0 +1,38 @@
+{
+	"name": "DynamicREST",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "DynamicRestService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"BaseURL": {
+					"value": "@dataset().BaseURL",
+					"type": "Expression"
+				},
+				"UserName": "restuser",
+				"Password": "RestPassword"
+			}
+		},
+		"parameters": {
+			"BaseURL": {
+				"type": "string"
+			},
+			"UserName": {
+				"type": "string"
+			},
+			"Password": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "ADF Framework"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": ""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,20 @@
+{
+	"name": "DynamicDataBricks",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-4968438946853361.1.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ADFControlAKV",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "DatabricksAccessToken"
+			},
+			"existingClusterId": "0713-141616-gape427"
+		}
+	}
+}

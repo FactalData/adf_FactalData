@@ -1,0 +1,30 @@
+{
+	"name": "SFTPBinaryFile",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "CallHandlingSFTP",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"FileName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Junk"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"fileName": {
+					"value": "@dataset().FileName",
+					"type": "Expression"
+				},
+				"folderPath": "/."
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,11 @@
+{
+	"name": "ADFControlAKV",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://kv-factaldata.vault.azure.net/"
+		}
+	}
+}

@@ -1,0 +1,22 @@
+{
+	"name": "DynamicDynamics",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Dynamics",
+		"typeProperties": {
+			"deploymentType": "Online",
+			"serviceUri": "https://mencap-d365crm-live.crm4.dynamics.com/",
+			"authenticationType": "Office365",
+			"username": "svc_D365MDP@mencap.org.uk",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ADFControlAKV",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "DynamicsPassword"
+			}
+		}
+	}
+}

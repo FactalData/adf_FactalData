@@ -1,0 +1,827 @@
+{
+	"name": "CopyRESTEndpointToAzureSQL",
+	"properties": {
+		"description": "Dynamically run the Copy Data task from a REST API to SQL Server",
+		"activities": [
+			{
+				"name": "Copy Tables",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "List the tables to be copied",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('List the tables to be copied').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "If TruncateTable",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@bool(item().TruncateTable)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "pr_TruncateTable",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[ADF].[pr_TruncateTable]",
+											"storedProcedureParameters": {
+												"DatabaseName": {
+													"value": {
+														"value": "@Item().DestinationDatabaseName",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"SchemaName": {
+													"value": {
+														"value": "@Item().DestinationSchemaName",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"TableName": {
+													"value": {
+														"value": "@Item().DestinationTableName",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "DynamicAzureSqlDatabase",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"ServerName": {
+													"value": "@Item().DestinationServerName",
+													"type": "Expression"
+												},
+												"DatabaseName": {
+													"value": "@Item().DestinationDatabaseName",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Set TaskStartTime",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "If TruncateTable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "TaskStartTime",
+								"value": {
+									"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set TaskEndTime",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Copy Data From REST API to Azure SQLDB",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "TaskEndTime",
+								"value": {
+									"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Execute pr_InsertTaskLogInfo",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Set TaskEndTime",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[ADF].[pr_InsertTaskLogInfo]",
+								"storedProcedureParameters": {
+									"ConfigId": {
+										"value": {
+											"value": "@Item().ConfigId",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"PipelineRunId": {
+										"value": {
+											"value": "@variables('RunId')",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"TaskStartTime": {
+										"value": {
+											"value": "@variables('TaskStartTime')",
+											"type": "Expression"
+										},
+										"type": "Datetime"
+									},
+									"TaskEndTime": {
+										"value": {
+											"value": "@variables('TaskEndTime')",
+											"type": "Expression"
+										},
+										"type": "Datetime"
+									},
+									"RowsCopied": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.rowsCopied",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"RowsRead": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.rowsRead",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"DataRead": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.dataread",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"DataWritten": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.dataWritten",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"CopyDuration": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.CopyDuration",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"Throughput": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.throughput",
+											"type": "Expression"
+										},
+										"type": "Decimal"
+									},
+									"IntegrationRuntime": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.effectiveIntegrationRuntime",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "DynamicAzureSqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Execute pr_InsertErrorLogInfo AzDB_copy1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy Data From REST API to Azure SQLDB",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[ADF].[pr_InsertErrorLogInfo]",
+								"storedProcedureParameters": {
+									"ConfigId": {
+										"value": {
+											"value": "@Item().ConfigId",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"ErrorCode": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.errors[0].code",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"ErrorMessage": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.errors[0].Message",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"EventType": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.errors[0].EventType",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"EventCategory": {
+										"value": {
+											"value": "@activity('Copy Data From REST API to Azure SQLDB').output.errors[0].Category",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"RunId": {
+										"value": {
+											"value": "@variables('RunId')",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"StartTime": {
+										"value": {
+											"value": "@variables('TaskStartTime')",
+											"type": "Expression"
+										},
+										"type": "Datetime"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "DynamicAzureSqlDatabase",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Copy Data From REST API to Azure SQLDB",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Return Mapping Columns",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "02:00:00",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"tableOption": "autoCreate"
+								},
+								"enableStaging": false,
+								"parallelCopies": 1,
+								"dataIntegrationUnits": 2,
+								"translator": {
+									"value": "@json(activity('Return Mapping Columns').output.firstrow.json_output)",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DynamicREST",
+									"type": "DatasetReference",
+									"parameters": {
+										"BaseURL": {
+											"value": "@item().SourceServerName",
+											"type": "Expression"
+										},
+										"UserName": "restuser",
+										"Password": "RestPassword"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureSqlTable",
+									"type": "DatasetReference",
+									"parameters": {
+										"ServerName": {
+											"value": "@Item().DestinationServerName",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@Item().DestinationDatabaseName",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@Item().DestinationSchemaName",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@Item().DestinationTableName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Return Mapping Columns",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Set TaskStartTime",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[ADF].[pr_getColumnMapping]",
+									"storedProcedureParameters": {
+										"ConfigId": {
+											"type": "Int32",
+											"value": {
+												"value": "@item().ConfigId",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlTable",
+									"type": "DatasetReference",
+									"parameters": {
+										"ServerName": {
+											"value": "@pipeline().parameters.ETLServerName",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@pipeline().parameters.ETLDatabaseName",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@pipeline().parameters.ETLSchemaName",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@pipeline().parameters.ETLTableName",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set RunId",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "RunId",
+					"value": {
+						"value": "@pipeline().parameters.MasterRunId",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set StartTime",
+				"description": ".",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineStartTime",
+					"value": {
+						"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set EndTime",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Copy Tables",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineEndTime",
+					"value": {
+						"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set PipelineName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineName",
+					"value": {
+						"value": "@pipeline().Pipeline",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Update Pipeline LogInfo",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set EndTime",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[ADF].[pr_InsertPipelineLogInfo]",
+					"storedProcedureParameters": {
+						"PipelineRunId": {
+							"value": {
+								"value": "@variables('RunId')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStartTime": {
+							"value": {
+								"value": "@variables('PipelineStartTime')",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"PipelineEndTime": {
+							"value": {
+								"value": "@variables('PipelineEndTime')",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"TriggerName": {
+							"value": {
+								"value": "@variables('TriggerName')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "DynamicAzureSqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ServerName": {
+							"value": "@pipeline().parameters.ETLServerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@pipeline().parameters.ETLDatabaseName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set TriggerName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "TriggerName",
+					"value": {
+						"value": "@pipeline().parameters.TriggerName",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "List the tables to be copied",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set DynamicStatement False",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@variables('DynamicStatement')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTable",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ETLServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.ETLDatabaseName",
+								"type": "Expression"
+							},
+							"SchemaName": {
+								"value": "@pipeline().parameters.ETLSchemaName",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.ETLTableName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Set DynamicStatement False",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set PipelineName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set RunId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set TriggerName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DynamicStatement",
+					"value": {
+						"value": "@concat(pipeline().parameters.DynamicPipelineConfig, ' AND [LogicalGroup] = ', pipeline().parameters.LogicalGroup, ' ORDER BY LogicalOrder') ",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"DynamicPipelineConfig": {
+				"type": "string",
+				"defaultValue": "SELECT\t[ConfigId], [ConfigDescription], [AzureSQLDBSourceServerType], [SourceServerName], [SourceDatabaseName], [SourceSchemaName], [SourceTableName],  \t\t  \t\t[AzureSQLDBDestinationServerType], [DestinationServerName], [DestinationDatabaseName], [DestinationSchemaName], [DestinationTableName],  \t\t  \t\t[PipelineName], [LogicalGroup], [LogicalOrder], [TaskType], [TruncateTable], [Active], [SubDirectory]   \t\tFROM [ADF].[DynamicPipelineConfig]   WHERE [TaskType] = 'CopyREST' AND [Active] = 1"
+			},
+			"ServerName": {
+				"type": "string"
+			},
+			"DatabaseName": {
+				"type": "string"
+			},
+			"SchemaName": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			},
+			"ETLServerName": {
+				"type": "string"
+			},
+			"ETLDatabaseName": {
+				"type": "string"
+			},
+			"ETLSchemaName": {
+				"type": "string"
+			},
+			"ETLTableName": {
+				"type": "string"
+			},
+			"LogicalGroup": {
+				"type": "string",
+				"defaultValue": "0"
+			},
+			"LogicalOrder": {
+				"type": "string",
+				"defaultValue": "0"
+			},
+			"MasterRunId": {
+				"type": "string",
+				"defaultValue": "00000000-0000-0000-0000-000000000000"
+			},
+			"TriggerName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"RunId": {
+				"type": "String"
+			},
+			"PipelineStartTime": {
+				"type": "String"
+			},
+			"PipelineEndTime": {
+				"type": "String"
+			},
+			"PipelineName": {
+				"type": "String"
+			},
+			"DataFactoryName": {
+				"type": "String"
+			},
+			"TriggerName": {
+				"type": "String"
+			},
+			"TaskStartTime": {
+				"type": "String"
+			},
+			"TaskEndTime": {
+				"type": "String"
+			},
+			"RowCount": {
+				"type": "String"
+			},
+			"Status": {
+				"type": "String"
+			},
+			"ErrorCode": {
+				"type": "String"
+			},
+			"DynamicStatement": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ADF Framework"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-08-09T14:19:16Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

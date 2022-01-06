@@ -1,0 +1,923 @@
+{
+	"name": "ExecuteAzureSQLStoredProc",
+	"properties": {
+		"description": "Dynamically run the Copy Data task",
+		"activities": [
+			{
+				"name": "Set RunId",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "RunId",
+					"value": {
+						"value": "@pipeline().parameters.MasterRunId",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set StartTime",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineStartTime",
+					"value": {
+						"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set EndTime",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Execute Stored Procs",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineEndTime",
+					"value": {
+						"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set PipelineName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineName",
+					"value": {
+						"value": "@pipeline().Pipeline",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Update Pipeline LogInfo",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set EndTime",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[ADF].[pr_InsertPipelineLogInfo]",
+					"storedProcedureParameters": {
+						"PipelineRunId": {
+							"value": {
+								"value": "@variables('RunId')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStartTime": {
+							"value": {
+								"value": "@variables('PipelineStartTime')",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"PipelineEndTime": {
+							"value": {
+								"value": "@variables('PipelineEndTime')",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"TriggerName": {
+							"value": {
+								"value": "@variables('TriggerName')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "DynamicAzureSqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ServerName": {
+							"value": "@pipeline().parameters.ETLServerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@pipeline().parameters.ETLDatabaseName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set TriggerName",
+				"description": "..",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "TriggerName",
+					"value": {
+						"value": "@pipeline().parameters.TriggerName",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute Stored Procs",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "List the stored procs",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('List the stored procs').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "If AzureSQLDBServerType",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@bool(item().AzureSQLDBStoredProcServerType)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Set TaskStartTime - SQLServer",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "TaskStartTime",
+											"value": {
+												"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Set TaskEndTime - SQLServer",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Exec Stored procedure - SQLServer",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "TaskEndTime",
+											"value": {
+												"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Execute pr_InsertTaskLogInfo - SQLServer",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Set TaskEndTime - SQLServer",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[ADF].pr_InsertTaskLogInfo[]",
+											"storedProcedureParameters": {
+												"ConfigId": {
+													"value": {
+														"value": "@Item().ConfigId",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"PipelineRunId": {
+													"value": {
+														"value": "@variables('RunId')",
+														"type": "Expression"
+													},
+													"type": "Guid"
+												},
+												"TaskStartTime": {
+													"value": {
+														"value": "@variables('TaskStartTime')",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"TaskEndTime": {
+													"value": {
+														"value": "@variables('TaskEndTime')",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"RowsCopied": {
+													"value": null,
+													"type": "Int64"
+												},
+												"RowsRead": {
+													"value": null,
+													"type": "Int64"
+												},
+												"DataRead": {
+													"value": null,
+													"type": "Int64"
+												},
+												"DataWritten": {
+													"value": null,
+													"type": "Int64"
+												},
+												"CopyDuration": {
+													"value": null,
+													"type": "Int64"
+												},
+												"Throughput": {
+													"value": null,
+													"type": "Decimal"
+												},
+												"IntegrationRuntime": {
+													"value": null,
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "DynamicSqlServer",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"ServerName": {
+													"value": "@Item().ServerName",
+													"type": "Expression"
+												},
+												"DatabaseName": {
+													"value": "@Item().DatabaseName",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "Exec Stored procedure - SQLServer",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Set TaskStartTime - SQLServer",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": {
+												"value": "@concat(item().StoredProcSchema, '.', item().StoredProcName)",
+												"type": "Expression"
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "DynamicAzureSqlDatabase",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"ServerName": "sql-datateam-dev-01.database.windows.net",
+												"DatabaseName": "sqldb-datateam-dev-01"
+											}
+										}
+									},
+									{
+										"name": "Execute pr_InsertErrorLogInfo AzDB - Stored Proc_copy1",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Exec Stored procedure - SQLServer",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[ADF].[pr_InsertErrorLogInfo]",
+											"storedProcedureParameters": {
+												"ConfigId": {
+													"value": {
+														"value": "@Item().ConfigId",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"ErrorCode": {
+													"value": {
+														"value": "@activity('Exec Stored procedure - SQLServer').error.errorCode",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"ErrorMessage": {
+													"value": {
+														"value": "@activity('Exec Stored procedure - SQLServer').error.Message",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"EventType": {
+													"value": {
+														"value": "0",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"EventCategory": {
+													"value": {
+														"value": "0",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"RunId": {
+													"value": {
+														"value": "@variables('RunId')",
+														"type": "Expression"
+													},
+													"type": "Guid"
+												},
+												"StartTime": {
+													"value": {
+														"value": "@variables('TaskStartTime')",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "DynamicAzureSqlDatabase",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"ServerName": {
+													"value": "@pipeline().parameters.ETLServerName",
+													"type": "Expression"
+												},
+												"DatabaseName": {
+													"value": "@pipeline().parameters.ETLDatabaseName",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Set TaskStartTime - AzDB",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "TaskStartTime",
+											"value": {
+												"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Set TaskEndTime - AzDB",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Exec Stored procedure on Azue SQL DB",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "TaskEndTime",
+											"value": {
+												"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Execute pr_InsertTaskLogInfo - AzDB",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Set TaskEndTime - AzDB",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[ADF].[pr_InsertTaskLogInfo]",
+											"storedProcedureParameters": {
+												"ConfigId": {
+													"value": {
+														"value": "@Item().ConfigId",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"PipelineRunId": {
+													"value": {
+														"value": "@variables('RunId')",
+														"type": "Expression"
+													},
+													"type": "Guid"
+												},
+												"TaskStartTime": {
+													"value": {
+														"value": "@variables('TaskStartTime')",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"TaskEndTime": {
+													"value": {
+														"value": "@variables('TaskEndTime')",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												},
+												"RowsCopied": {
+													"value": null,
+													"type": "Int64"
+												},
+												"RowsRead": {
+													"value": null,
+													"type": "Int64"
+												},
+												"DataRead": {
+													"value": null,
+													"type": "Int64"
+												},
+												"DataWritten": {
+													"value": null,
+													"type": "Int64"
+												},
+												"CopyDuration": {
+													"value": null,
+													"type": "Int64"
+												},
+												"Throughput": {
+													"value": null,
+													"type": "Decimal"
+												},
+												"IntegrationRuntime": {
+													"value": null,
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "DynamicAzureSqlDatabase",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"ServerName": {
+													"value": "@pipeline().parameters.ETLServerName",
+													"type": "Expression"
+												},
+												"DatabaseName": {
+													"value": "@pipeline().parameters.ETLDatabaseName",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "Exec Stored procedure on Azue SQL DB",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Set TaskStartTime - AzDB",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": {
+												"value": "@concat(item().StoredProcSchema, '.', item().StoredProcName)",
+												"type": "Expression"
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "DynamicAzureSqlDatabase",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"ServerName": {
+													"value": "@Item().StoredProcServerName",
+													"type": "Expression"
+												},
+												"DatabaseName": {
+													"value": "@Item().StoredProcDatabaseName",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "Execute pr_InsertErrorLogInfo AzDB - Stored Proc",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Exec Stored procedure on Azue SQL DB",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[ADF].[pr_InsertErrorLogInfo]",
+											"storedProcedureParameters": {
+												"ConfigId": {
+													"value": {
+														"value": "@Item().ConfigId",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"ErrorCode": {
+													"value": {
+														"value": "@activity('Exec Stored procedure on Azue SQL DB').error.errorCode",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"ErrorMessage": {
+													"value": {
+														"value": "@activity('Exec Stored procedure on Azue SQL DB').error.Message",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"EventType": {
+													"value": {
+														"value": "0",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"EventCategory": {
+													"value": {
+														"value": "0",
+														"type": "Expression"
+													},
+													"type": "Int64"
+												},
+												"RunId": {
+													"value": {
+														"value": "@variables('RunId')",
+														"type": "Expression"
+													},
+													"type": "Guid"
+												},
+												"StartTime": {
+													"value": {
+														"value": "@variables('TaskStartTime')",
+														"type": "Expression"
+													},
+													"type": "Datetime"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "DynamicAzureSqlDatabase",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"ServerName": {
+													"value": "@pipeline().parameters.ETLServerName",
+													"type": "Expression"
+												},
+												"DatabaseName": {
+													"value": "@pipeline().parameters.ETLDatabaseName",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "List the stored procs",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set DynamicStatement False",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@variables('DynamicStatement')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"isolationLevel": "ReadCommitted",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTable",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ETLServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.ETLDatabaseName",
+								"type": "Expression"
+							},
+							"SchemaName": {
+								"value": "@pipeline().parameters.ETLSchemaName",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.ETLTableName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Set DynamicStatement False",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set RunId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set PipelineName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set TriggerName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DynamicStatement",
+					"value": {
+						"value": "@concat(pipeline().parameters.DynamicPipelineConfig, ' AND [LogicalGroup] = ', pipeline().parameters.LogicalGroup, ' AND [StoredProcServerName] = ''', pipeline().parameters.ServerName, ''' AND [StoredProcDatabaseName] = ''', pipeline().parameters.DatabaseName, ''' ORDER BY [LogicalOrder] ASC')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"DynamicPipelineConfig": {
+				"type": "string",
+				"defaultValue": "SELECT\t[ConfigId], [ConfigDescription], [AzureSQLDBSourceServerType], [SourceServerName], [SourceDatabaseName], [SourceSchemaName], [SourceTableName],  \t\t[AzureSQLDBDestinationServerType], [DestinationServerName], [DestinationDatabaseName], [DestinationSchemaName], [DestinationTableName],  \t\t[AzureSQLDBStoredProcServerType], [StoredProcServerName], [StoredProcDatabaseName], [StoredProcSchema], [StoredProcName], [PipelineName],  \t\t[LogicalGroup], [LogicalOrder], [TaskType], [TruncateTable], [Active] FROM [ADF].[DynamicPipelineConfig]  WHERE [TaskType] = 'StoredProc'  AND [Active] = 1"
+			},
+			"ServerName": {
+				"type": "string"
+			},
+			"DatabaseName": {
+				"type": "string"
+			},
+			"SchemaName": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			},
+			"ETLServerName": {
+				"type": "string"
+			},
+			"ETLDatabaseName": {
+				"type": "string"
+			},
+			"ETLSchemaName": {
+				"type": "string"
+			},
+			"ETLTableName": {
+				"type": "string"
+			},
+			"LogicalGroup": {
+				"type": "string",
+				"defaultValue": "0"
+			},
+			"LogicalOrder": {
+				"type": "string",
+				"defaultValue": "0"
+			},
+			"MasterRunId": {
+				"type": "string",
+				"defaultValue": "00000000-0000-0000-0000-000000000000"
+			},
+			"NumOfDays": {
+				"type": "int",
+				"defaultValue": -1
+			},
+			"RunModeCode": {
+				"type": "string",
+				"defaultValue": "Automatic"
+			},
+			"TriggerName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"RunId": {
+				"type": "String"
+			},
+			"PipelineStartTime": {
+				"type": "String"
+			},
+			"PipelineEndTime": {
+				"type": "String"
+			},
+			"PipelineName": {
+				"type": "String"
+			},
+			"DataFactoryName": {
+				"type": "String"
+			},
+			"TriggerName": {
+				"type": "String"
+			},
+			"TaskStartTime": {
+				"type": "String"
+			},
+			"TaskEndTime": {
+				"type": "String"
+			},
+			"RowCount": {
+				"type": "String"
+			},
+			"Status": {
+				"type": "String"
+			},
+			"ErrorCode": {
+				"type": "String"
+			},
+			"StoredProcName": {
+				"type": "String"
+			},
+			"ErrorMessage": {
+				"type": "String"
+			},
+			"DynamicStatement": {
+				"type": "String"
+			},
+			"DynamicServerName": {
+				"type": "String"
+			},
+			"DynamicDatabaseName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ADF Framework"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-08-09T14:26:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,208 @@
+{
+	"name": "ADHoc_Dynamic Bulk Copy REST",
+	"properties": {
+		"description": "Bulk Copy Data task from a REST API to SQL Server",
+		"activities": [
+			{
+				"name": "Copy Tables",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "List the tables to be copied",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('List the tables to be copied').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Bulk Copy Data From REST API to Azure SQLDB",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "01:00:00",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"tableOption": "autoCreate"
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DynamicREST",
+									"type": "DatasetReference",
+									"parameters": {
+										"BaseURL": {
+											"value": "@item().BaseURL",
+											"type": "Expression"
+										},
+										"UserName": "restuser",
+										"Password": "RestPassword"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureSqlTable",
+									"type": "DatasetReference",
+									"parameters": {
+										"ServerName": {
+											"value": "@pipeline().parameters.ServerName",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@pipeline().parameters.DatabaseName",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@pipeline().parameters.SchemaName",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@pipeline().parameters.TableName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "List the tables to be copied",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[Landing].[pr_RESTBulkLoad]",
+						"storedProcedureParameters": {
+							"Amount": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.Amount",
+									"type": "Expression"
+								}
+							},
+							"BaseURL": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.BaseURL",
+									"type": "Expression"
+								}
+							},
+							"MaxRowCount": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.MaxRowCount",
+									"type": "Expression"
+								}
+							},
+							"Offset": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.Offset",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTable",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.DatabaseName",
+								"type": "Expression"
+							},
+							"SchemaName": {
+								"value": "@pipeline().parameters.SchemaName",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.TableName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			}
+		],
+		"parameters": {
+			"ServerName": {
+				"type": "string",
+				"defaultValue": "sql-datateam-shared-01.database.windows.net"
+			},
+			"DatabaseName": {
+				"type": "string",
+				"defaultValue": "sqldb-datateam-shared-02"
+			},
+			"SchemaName": {
+				"type": "string",
+				"defaultValue": "Landing"
+			},
+			"TableName": {
+				"type": "string",
+				"defaultValue": "plannedactivity"
+			},
+			"BaseURL": {
+				"type": "string",
+				"defaultValue": "https://mencap-poc-accp.mendixcloud.com/rest/restplannedactivity/v1/plannedactivity"
+			},
+			"Offset": {
+				"type": "int",
+				"defaultValue": 0
+			},
+			"Amount": {
+				"type": "int",
+				"defaultValue": 10
+			},
+			"MaxRowCount": {
+				"type": "int",
+				"defaultValue": 20
+			}
+		},
+		"folder": {
+			"name": "Junk"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-08-09T10:05:55Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

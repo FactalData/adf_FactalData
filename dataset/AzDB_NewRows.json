@@ -1,0 +1,20 @@
+{
+	"name": "AzDB_NewRows",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "tempFactalData",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "MyFinance"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "DWH",
+			"table": "Fact_Transaction"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

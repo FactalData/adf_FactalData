@@ -1,0 +1,66 @@
+{
+	"name": "Stage_Files",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase_FactalData",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"ServerName": "srv-factaldata-01.database.windows.net",
+				"DBName": "db-factaldata-01-dev"
+			}
+		},
+		"folder": {
+			"name": "MyFinance"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "Id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Date",
+				"type": "varchar"
+			},
+			{
+				"name": "Description",
+				"type": "varchar"
+			},
+			{
+				"name": "Amount",
+				"type": "money",
+				"precision": 19,
+				"scale": 4
+			},
+			{
+				"name": "Balance",
+				"type": "money",
+				"precision": 19,
+				"scale": 4
+			},
+			{
+				"name": "FileName",
+				"type": "varchar"
+			},
+			{
+				"name": "LoadStart",
+				"type": "varchar"
+			},
+			{
+				"name": "LoadEnd",
+				"type": "varchar"
+			},
+			{
+				"name": "RunId",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "Stage",
+			"table": "Files"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

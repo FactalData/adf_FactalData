@@ -1,0 +1,502 @@
+{
+	"name": "CopyBinaryFileFromDataLakeToStorageAccount",
+	"properties": {
+		"description": "Dynamically run the Copy Data task",
+		"activities": [
+			{
+				"name": "Set StartTime",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineStartTime",
+					"value": {
+						"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set EndTime",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Copy files from the Data Lake to the Storage Account",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineEndTime",
+					"value": {
+						"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set PipelineName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineName",
+					"value": {
+						"value": "@pipeline().Pipeline",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Update Pipeline LogInfo",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set EndTime",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[ADF].[pr_InsertPipelineLogInfo]",
+					"storedProcedureParameters": {
+						"PipelineRunId": {
+							"value": {
+								"value": "@variables('MasterRunId')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStartTime": {
+							"value": {
+								"value": "@variables('PipelineStartTime')",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"PipelineEndTime": {
+							"value": {
+								"value": "@variables('PipelineEndTime')",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"TriggerName": {
+							"value": {
+								"value": "@variables('TriggerName')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "DynamicAzureSqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ServerName": {
+							"value": "@pipeline().parameters.ETLServerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@pipeline().parameters.ETLDatabaseName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set TriggerName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "TriggerName",
+					"value": {
+						"value": "@pipeline().parameters.TriggerName",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "List the files to be copied",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Set PipelineName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set TriggerName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "If MasterRunId is not set",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DataLakeBinaryFolder",
+						"type": "DatasetReference",
+						"parameters": {
+							"DataLakeStorageAccount": {
+								"value": "@pipeline().parameters.DataLakeStorageAccount",
+								"type": "Expression"
+							},
+							"DataLakeContainer": {
+								"value": "@pipeline().parameters.DataLakeContainer",
+								"type": "Expression"
+							},
+							"DataLakeDirectory": {
+								"value": "@pipeline().parameters.DataLakeDirectory",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Filter for just files and not sub folders",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "List the files to be copied",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('List the files to be copied').output.childitems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().type, 'File')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Copy files from the Data Lake to the Storage Account",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Filter for just files and not sub folders",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Filter for just files and not sub folders').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Copy a File",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": false,
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DataLakeBinaryFile",
+									"type": "DatasetReference",
+									"parameters": {
+										"DataLakeStorageAccount": {
+											"value": "@pipeline().parameters.DataLakeStorageAccount",
+											"type": "Expression"
+										},
+										"DataLakeContainer": {
+											"value": "@pipeline().parameters.DataLakeContainer",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "StorageAccountBinaryFile",
+									"type": "DatasetReference",
+									"parameters": {
+										"StorageAccount": {
+											"value": "@pipeline().parameters.StorageAccount",
+											"type": "Expression"
+										},
+										"StorageAccountContainer": {
+											"value": "@pipeline().parameters.StorageAccountContainer",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@Item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "If MasterRunId is not set",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@empty(pipeline().parameters.MasterRunId)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set MasterRunId False",
+							"description": "",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "MasterRunId",
+								"value": {
+									"value": "@pipeline().parameters.MasterRunId",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Set MasterRunId True",
+							"description": "",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "MasterRunId",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"DynamicPipelineConfig": {
+				"type": "string",
+				"defaultValue": "SELECT\t[ConfigId], [AzureSQLDBDestinationServerType], [DestinationServerName], [DestinationDatabaseName],  \t\t \t\t[DestinationSchemaName], [DestinationTableName], [PipelineName], [LogicalGroup], [LogicalOrder],  \t\t \t\t[TaskType], [TruncateTable], [Active], [FileName], [SheetName], [FileExtension], [SubDirectory], [AzureSQLDBSourceServerType]  FROM [ADF].[DynamicPipelineConfig]     WHERE [TaskType] = 'CopyFile'  AND ([FileExtension] = 'xlsx' OR [FileExtension] = 'xls') AND [Active] = 1"
+			},
+			"ServerName": {
+				"type": "string"
+			},
+			"DatabaseName": {
+				"type": "string"
+			},
+			"SchemaName": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			},
+			"ETLServerName": {
+				"type": "string"
+			},
+			"ETLDatabaseName": {
+				"type": "string"
+			},
+			"ETLSchemaName": {
+				"type": "string"
+			},
+			"ETLTableName": {
+				"type": "string"
+			},
+			"LogicalGroup": {
+				"type": "string",
+				"defaultValue": "0"
+			},
+			"LogicalOrder": {
+				"type": "string",
+				"defaultValue": "0"
+			},
+			"MasterRunId": {
+				"type": "string",
+				"defaultValue": "00000000-0000-0000-0000-000000000000"
+			},
+			"TriggerName": {
+				"type": "string"
+			},
+			"DataLakeStorageAccount": {
+				"type": "string",
+				"defaultValue": "stdatateamshared01"
+			},
+			"DataLakeContainer": {
+				"type": "string",
+				"defaultValue": "landing"
+			},
+			"StorageAccount": {
+				"type": "string",
+				"defaultValue": "stdatateamdev01"
+			},
+			"StorageAccountContainer": {
+				"type": "string",
+				"defaultValue": "landing"
+			},
+			"DataLakeDirectory": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"MasterRunId": {
+				"type": "String"
+			},
+			"PipelineStartTime": {
+				"type": "String"
+			},
+			"PipelineEndTime": {
+				"type": "String"
+			},
+			"PipelineName": {
+				"type": "String"
+			},
+			"DataFactoryName": {
+				"type": "String"
+			},
+			"TriggerName": {
+				"type": "String"
+			},
+			"TaskStartTime": {
+				"type": "String"
+			},
+			"TaskEndTime": {
+				"type": "String"
+			},
+			"RowCount": {
+				"type": "String"
+			},
+			"Status": {
+				"type": "String"
+			},
+			"ErrorCode": {
+				"type": "String"
+			},
+			"DynamicStatement": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ADF Framework"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-08-09T14:46:06Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

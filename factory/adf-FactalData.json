@@ -1,0 +1,9 @@
+{
+	"name": "adf-FactalData",
+	"location": "uksouth",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "b5bd5cb9-e044-4c2e-8f59-a17bb03017da",
+		"tenantId": "a332c269-1eaf-44fe-a051-a9402800a91d"
+	}
+}

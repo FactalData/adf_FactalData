@@ -1,0 +1,507 @@
+{
+	"name": "TheBatch",
+	"properties": {
+		"description": "The overnight batch for the DWH project",
+		"activities": [
+			{
+				"name": "LogicalGroupsLookup",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Execute ADF_Dynamic Copy From Data Lake",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@pipeline().parameters.DynamicPipelineConfig",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTable",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ETLServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.ETLDatabaseName",
+								"type": "Expression"
+							},
+							"SchemaName": {
+								"value": "@pipeline().parameters.ETLSchemaName",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.ETLTableName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach MasterControl",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LogicalGroupsLookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('LogicalGroupsLookup').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute MasterControl Pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "MasterControl - AzureSQL",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ETLServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"ETLDatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									},
+									"ETLSchemaName": {
+										"value": "@pipeline().parameters.ETLSchemaName",
+										"type": "Expression"
+									},
+									"ETLTableName": {
+										"value": "@pipeline().parameters.ETLTableName",
+										"type": "Expression"
+									},
+									"LogicalGroup": {
+										"value": "@string(Item().LogicalGroup)",
+										"type": "Expression"
+									},
+									"TriggerName": {
+										"value": "@variables('TriggerName')",
+										"type": "Expression"
+									},
+									"MasterRunId": {
+										"value": "@variables('MasterRunId')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set MasterRunId",
+				"description": "",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "MasterRunId",
+					"value": {
+						"value": "@pipeline().RunId",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set PipelineName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineName",
+					"value": {
+						"value": "@pipeline().Pipeline",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set TriggerName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set StartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "TriggerName",
+					"value": {
+						"value": "@pipeline().TriggerName",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set StartTime",
+				"description": ".",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineStartTime",
+					"value": {
+						"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Update Pipeline LogInfo",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set EndTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[ADF].[pr_InsertPipelineLogInfo]",
+					"storedProcedureParameters": {
+						"PipelineRunId": {
+							"value": {
+								"value": "@variables('MasterRunId')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineStartTime": {
+							"value": {
+								"value": "@variables('PipelineStartTime')",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"PipelineEndTime": {
+							"value": {
+								"value": "@variables('PipelineEndTime')",
+								"type": "Expression"
+							},
+							"type": "Datetime"
+						},
+						"DataFactoryName": {
+							"value": {
+								"value": "@pipeline().DataFactory",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"TriggerName": {
+							"value": {
+								"value": "@variables('TriggerName')",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "DynamicAzureSqlDatabase",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ServerName": {
+							"value": "@pipeline().parameters.ETLServerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@pipeline().parameters.ETLDatabaseName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set EndTime",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ForEach MasterControl",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PipelineEndTime",
+					"value": {
+						"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute ADF_Dynamic Copy From Data Lake",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set MasterRunId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set PipelineName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set TriggerName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "CopyBinaryFileFromDataLakeToStorageAccount",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"ETLServerName": {
+							"value": "@pipeline().parameters.ETLServerName",
+							"type": "Expression"
+						},
+						"ETLDatabaseName": {
+							"value": "@pipeline().parameters.ETLDatabaseName",
+							"type": "Expression"
+						},
+						"ETLSchemaName": {
+							"value": "@pipeline().parameters.ETLSchemaName",
+							"type": "Expression"
+						},
+						"ETLTableName": {
+							"value": "@pipeline().parameters.ETLTableName",
+							"type": "Expression"
+						},
+						"MasterRunId": {
+							"value": "@variables('MasterRunId')",
+							"type": "Expression"
+						},
+						"StorageAccount": {
+							"value": "@pipeline().parameters.StorageAccount",
+							"type": "Expression"
+						},
+						"StorageAccountContainer": {
+							"value": "@pipeline().parameters.StorageAccountContainer",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Send Post Batch Email",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Update Pipeline LogInfo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.SendPostBatchEmail",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Execute ADF_Send Email",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "SendEmail",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"ETLServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"ETLDatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									},
+									"ETLSchemaName": {
+										"value": "@pipeline().parameters.ETLSchemaName",
+										"type": "Expression"
+									},
+									"ETLTableName": {
+										"value": "@pipeline().parameters.ETLTableName",
+										"type": "Expression"
+									},
+									"EmailTo": {
+										"value": "@pipeline().parameters.EmailTo",
+										"type": "Expression"
+									},
+									"EmailSubject": {
+										"value": "@pipeline().parameters.EmailSubject",
+										"type": "Expression"
+									},
+									"EmailMessage": {
+										"value": "@pipeline().parameters.EmailMessage",
+										"type": "Expression"
+									},
+									"PipelineName": {
+										"value": "@pipeline().parameters.PipelineName",
+										"type": "Expression"
+									},
+									"SendMailLogicAppURL": {
+										"value": "@pipeline().parameters.SendMailLogicAppURL",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"ETLServerName": {
+				"type": "string",
+				"defaultValue": "sql-factaldata-01.database.windows.net"
+			},
+			"ETLDatabaseName": {
+				"type": "string",
+				"defaultValue": "sqldb-factaldata-02"
+			},
+			"ETLSchemaName": {
+				"type": "string",
+				"defaultValue": "ADF"
+			},
+			"ETLTableName": {
+				"type": "string",
+				"defaultValue": "DynamicPipelineConfig"
+			},
+			"DynamicPipelineConfig": {
+				"type": "string",
+				"defaultValue": "SELECT DISTINCT LogicalGroup FROM [ADF].[DynamicPipelineConfig]  WHERE [Active] = 1 AND [LogicalGroup] > 0 ORDER BY LogicalGroup"
+			},
+			"EmailTo": {
+				"type": "string"
+			},
+			"EmailSubject": {
+				"type": "string"
+			},
+			"EmailMessage": {
+				"type": "string"
+			},
+			"PipelineName": {
+				"type": "string"
+			},
+			"SendMailLogicAppURL": {
+				"type": "string"
+			},
+			"SendPostBatchEmail": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"StorageAccount": {
+				"type": "string"
+			},
+			"StorageAccountContainer": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"PipelineStartTime": {
+				"type": "String"
+			},
+			"PipelineEndTime": {
+				"type": "String"
+			},
+			"TriggerName": {
+				"type": "String"
+			},
+			"PipelineName": {
+				"type": "String"
+			},
+			"MasterRunId": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ADF Framework"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-08-09T15:19:10Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

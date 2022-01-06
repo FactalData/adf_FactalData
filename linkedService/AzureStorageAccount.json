@@ -1,0 +1,11 @@
+{
+	"name": "AzureStorageAccount",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://stdatateamdev01.dfs.core.windows.net"
+		}
+	}
+}

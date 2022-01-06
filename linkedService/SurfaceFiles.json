@@ -1,0 +1,22 @@
+{
+	"name": "SurfaceFiles",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": "Files located on the surface file system",
+		"annotations": [],
+		"type": "FileServer",
+		"typeProperties": {
+			"host": "C:\\Users\\david\\OneDrive - Factal Data Limited\\Documents\\Finance",
+			"userId": "david@brinn.co.uk",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ADFControlAKV",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "FinanceFilesPassword",
+				"secretVersion": "ADF_User"
+			}
+		}
+	}
+}

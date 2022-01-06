@@ -1,0 +1,514 @@
+{
+	"name": "SendEmail",
+	"properties": {
+		"activities": [
+			{
+				"name": "The Batch Lookup",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "WITH Batch_cte (BatchRunId, BatchStartTime, BatchEndTime, BatchDuration) AS\n\n(\nSELECT \n\n\tPipelineRunId AS BatchRunId, \n\tPipelineStartTime AS BatchStartTime, \n\tPipelineEndTime AS BatchEndTime,\n\tconvert(varchar(5),DateDiff(s, PipelineStartTime, PipelineEndTime)/3600)+':'+\n\tconvert(varchar(5),DateDiff(s, PipelineStartTime, PipelineEndTime)%3600/60)+':'+\n\tconvert(varchar(5),(DateDiff(s, PipelineStartTime, PipelineEndTime)%60)) AS BatchDuration\nFROM [ADF].[PipelineLog] \nWHERE PipelineName = 'ADF_Batch'\n)\n\n\nSELECT TOP 1 * FROM Batch_cte ORDER BY BatchStartTime DESC",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTable",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ETLServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.ETLDatabaseName",
+								"type": "Expression"
+							},
+							"SchemaName": {
+								"value": "@pipeline().parameters.ETLSchemaName",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.ETLTableName",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			},
+			{
+				"name": "Set BatchRunId",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "The Batch Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "BatchRunId",
+					"value": {
+						"value": "@activity('The Batch Lookup').output.FirstRow.BatchRunId",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set BatchStartTime",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "The Batch Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "BatchStartTime",
+					"value": {
+						"value": "@formatDateTime(activity('The Batch Lookup').output.FirstRow.BatchStartTime, 'HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set BatchEndTime",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "The Batch Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "BatchEndTime",
+					"value": {
+						"value": "@formatDateTime(activity('The Batch Lookup').output.FirstRow.BatchEndTime, 'HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set BatchDuration",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "The Batch Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "BatchDuration",
+					"value": {
+						"value": "@activity('The Batch Lookup').output.FirstRow.BatchDuration",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Send Email",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set BatchRunId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set BatchStartTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set BatchEndTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set BatchDuration",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set PipelineName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set TaskCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set CopyDataTaskCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set CopyFileTaskCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set StoredProcTaskCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set ErrorCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set BatchDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@pipeline().parameters.SendMailLogicAppURL",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "@concat('{\"DataFactoryName\": \"', pipeline().DataFactory, '\",\"EmailTo\": \"', pipeline().parameters.EmailTo, '\",\"PipelineName\": \"', pipeline().Pipeline, '\",\"Subject\":\"', pipeline().parameters.EmailSubject, '\",\"Message\":\"', pipeline().parameters.EmailMessage, '\",\"BatchRunId\":\"', variables('BatchRunId'), '\",\"BatchStartTime\":\"', variables('BatchStartTime'), '\",\"BatchEndTime\":\"', variables('BatchEndTime'), '\",\"BatchDate\":\"', variables('BatchDate'), '\",\"BatchDuration\":\"', variables('BatchDuration'), '\",\"TaskCount\":\"', variables('TaskCount'), '\",\"CopyDataTaskCount\":\"', variables('CopyDataTaskCount'), '\",\"CopyFileTaskCount\":\"', variables('CopyFileTaskCount'), '\",\"StoredProcTaskCount\":\"', variables('StoredProcTaskCount'), '\",\"ErrorCount\":\"', variables('ErrorCount'), '\"}')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set PipelineName",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "The Batch Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@empty(pipeline().parameters.PipelineName)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set PipelineName False",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "PipelineName",
+								"value": {
+									"value": "@pipeline().parameters.PipelineName",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Set PipelineName True",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "PipelineName",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Tasks And Errors Lookup",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "WITH Batch_cte (BatchRunId, BatchStartTime) AS\n\n(\nSELECT \n\n\tPipelineRunId AS BatchRunId, \n\tPipelineStartTime AS BatchStartTime\nFROM [ADF].[PipelineLog] \nWHERE PipelineName = 'ADF_Batch'\n)\n\nSELECT\n(\n\tSELECT CAST(COUNT(T.TaskId) AS VARCHAR(10)) AS TypeCount\n\tFROM [ADF].[TaskLog] T\n\tINNER JOIN (SELECT TOP 1 * FROM Batch_cte ORDER BY BatchStartTime DESC) B ON T.RunId = B.BatchRunId\n\tINNER JOIN [ADF].[DynamicPipelineConfig] D ON T.ConfigId = D.ConfigId\n) AS TaskCount,\n(\n\tSELECT CAST(COUNT(T.TaskId) AS VARCHAR(10)) AS TypeCount\n\tFROM [ADF].[TaskLog] T\n\tINNER JOIN (SELECT TOP 1 * FROM Batch_cte ORDER BY BatchStartTime DESC) B ON T.RunId = B.BatchRunId\n\tINNER JOIN [ADF].[DynamicPipelineConfig] D ON T.ConfigId = D.ConfigId\n\tWHERE D.TaskType = 'CopyData'\n) AS CopyDataTaskCount,\n(\n\tSELECT CAST(COUNT(T.TaskId) AS VARCHAR(10)) AS TypeCount\n\tFROM [ADF].[TaskLog] T\n\tINNER JOIN (SELECT TOP 1 * FROM Batch_cte ORDER BY BatchStartTime DESC) B ON T.RunId = B.BatchRunId\n\tINNER JOIN [ADF].[DynamicPipelineConfig] D ON T.ConfigId = D.ConfigId\n\tWHERE D.TaskType = 'CopyFile'\n) AS CopyFileTaskCount,\n(\n\tSELECT CAST(COUNT(T.TaskId) AS VARCHAR(10)) AS TypeCount\n\tFROM [ADF].[TaskLog] T\n\tINNER JOIN (SELECT TOP 1 * FROM Batch_cte ORDER BY BatchStartTime DESC) B ON T.RunId = B.BatchRunId\n\tINNER JOIN [ADF].[DynamicPipelineConfig] D ON T.ConfigId = D.ConfigId\n\tWHERE D.TaskType = 'StoredProc'\n) AS StoredProcTaskCount,\n(\n\tSELECT CAST(COUNT(E.ErrorId) AS VARCHAR(10)) AS ErrorCount\n\tFROM [ADF].[ErrorLog] E\n\tINNER JOIN (SELECT TOP 1 * FROM Batch_cte ORDER BY BatchStartTime DESC) B ON E.RunId = B.BatchRunId\n\tINNER JOIN [ADF].[DynamicPipelineConfig] D ON E.ConfigId = D.ConfigId\n) AS ErrorCount",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTable",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ETLServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.ETLDatabaseName",
+								"type": "Expression"
+							},
+							"SchemaName": {
+								"value": "@pipeline().parameters.ETLSchemaName",
+								"type": "Expression"
+							},
+							"TableName": {
+								"value": "@pipeline().parameters.ETLTableName",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			},
+			{
+				"name": "Set TaskCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Tasks And Errors Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "TaskCount",
+					"value": {
+						"value": "@activity('Tasks And Errors Lookup').output.FirstRow.TaskCount",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set CopyDataTaskCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Tasks And Errors Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "CopyDataTaskCount",
+					"value": {
+						"value": "@activity('Tasks And Errors Lookup').output.FirstRow.CopyDataTaskCount",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set CopyFileTaskCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Tasks And Errors Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "CopyFileTaskCount",
+					"value": {
+						"value": "@activity('Tasks And Errors Lookup').output.FirstRow.CopyFileTaskCount",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set StoredProcTaskCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Tasks And Errors Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "StoredProcTaskCount",
+					"value": {
+						"value": "@activity('Tasks And Errors Lookup').output.FirstRow.StoredProcTaskCount",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set ErrorCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Tasks And Errors Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ErrorCount",
+					"value": {
+						"value": "@activity('Tasks And Errors Lookup').output.FirstRow.ErrorCount",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set BatchDate",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "The Batch Lookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "BatchDate",
+					"value": {
+						"value": "@formatDateTime(activity('The Batch Lookup').output.FirstRow.BatchStartTime, 'yyyy-MM-dd')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"ETLServerName": {
+				"type": "string",
+				"defaultValue": "sql-datateam-dev-01.database.windows.net"
+			},
+			"ETLDatabaseName": {
+				"type": "string",
+				"defaultValue": "sqldb-datateam-dev-01"
+			},
+			"ETLSchemaName": {
+				"type": "string",
+				"defaultValue": "ADF"
+			},
+			"ETLTableName": {
+				"type": "string",
+				"defaultValue": "DynamicPipelineConfig"
+			},
+			"EmailTo": {
+				"type": "string",
+				"defaultValue": "david.brinn@factaldata.com"
+			},
+			"EmailSubject": {
+				"type": "string",
+				"defaultValue": "Test"
+			},
+			"EmailMessage": {
+				"type": "string",
+				"defaultValue": "ThisIsATest"
+			},
+			"PipelineName": {
+				"type": "string"
+			},
+			"SendMailLogicAppURL": {
+				"type": "string",
+				"defaultValue": "https://prod-23.uksouth.logic.azure.com:443/workflows/922d4bce0a2c4140a0dc680b1d0f3cc3/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=qt7W5xQxLjsY_t3TQ36-OLxGkYXakIP--wxAsTU3sfY"
+			}
+		},
+		"variables": {
+			"BatchRunId": {
+				"type": "String"
+			},
+			"BatchStartTime": {
+				"type": "String"
+			},
+			"BatchEndTime": {
+				"type": "String"
+			},
+			"BatchDuration": {
+				"type": "String"
+			},
+			"PipelineName": {
+				"type": "String"
+			},
+			"TaskCount": {
+				"type": "String"
+			},
+			"CopyDataTaskCount": {
+				"type": "String"
+			},
+			"CopyFileTaskCount": {
+				"type": "String"
+			},
+			"StoredProcTaskCount": {
+				"type": "String"
+			},
+			"ErrorCount": {
+				"type": "String"
+			},
+			"BatchDate": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ADF Framework"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-08-09T14:36:50Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
