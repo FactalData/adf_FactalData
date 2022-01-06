@@ -1,0 +1,9 @@
+{
+	"name": "adf-WBC-Data-Analytics-Prod",
+	"location": "uksouth",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "e0b5a1f2-b69e-4c01-8f4c-8ddee01fd28e",
+		"tenantId": "996ee15c-0b3e-4a6f-8e65-120a9a51821a"
+	}
+}

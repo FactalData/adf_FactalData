@@ -1,0 +1,11 @@
+{
+	"name": "sqldb_WBC_Data_Analytics",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=sqldb-wbc-data-analytics-prod.database.windows.net;Initial Catalog=sqldb-WBC-Data-Analytics-Prod"
+		}
+	}
+}

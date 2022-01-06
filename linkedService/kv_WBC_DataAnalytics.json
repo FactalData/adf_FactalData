@@ -1,0 +1,17 @@
+{
+	"name": "kv_WBC_DataAnalytics",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"parameters": {
+			"KeyVaultName": {
+				"type": "string",
+				"defaultValue": "https://kv-wbcdataanalytics-prod.vault.azure.net/"
+			}
+		},
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "@{linkedService().KeyVaultName}"
+		}
+	}
+}
