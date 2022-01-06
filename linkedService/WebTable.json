@@ -7,10 +7,6 @@
 		"typeProperties": {
 			"url": "https://www.caravanclub.co.uk/uk-holidays/uk-search-and-book/certificated-locations/search/?Name=&SiteContentId=&County=&Town=&Postcode=&LatLong=&p=1",
 			"authenticationType": "Anonymous"
-		},
-		"connectVia": {
-			"referenceName": "SelfHostedIntegrationRuntime",
-			"type": "IntegrationRuntimeReference"
 		}
 	}
 }

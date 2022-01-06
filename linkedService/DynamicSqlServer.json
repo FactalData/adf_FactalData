@@ -24,10 +24,6 @@
 				},
 				"secretName": "SQLServerPassword"
 			}
-		},
-		"connectVia": {
-			"referenceName": "SelfHostedIntegrationRuntime",
-			"type": "IntegrationRuntimeReference"
 		}
 	}
 }

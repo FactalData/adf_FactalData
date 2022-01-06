@@ -16,10 +16,6 @@
 				"secretName": "MyAccountPassword-DavidBrinnCoUK",
 				"secretVersion": ""
 			}
-		},
-		"connectVia": {
-			"referenceName": "SelfHostedIntegrationRuntime",
-			"type": "IntegrationRuntimeReference"
 		}
 	}
 }
