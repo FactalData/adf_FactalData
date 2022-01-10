@@ -42,7 +42,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"expression": {
-						"value": "@And(\ngreaterOrEquals(variables('TimeNow'), variables('WindowStart')),\nlessOrEquals(variables('TimeNow'), variables('WindowEnd'))\n)",
+						"value": "@And(\ngreater(variables('TimeNow'), variables('WindowStart')),\nless(variables('TimeNow'), variables('WindowEnd'))\n)",
 						"type": "Expression"
 					},
 					"ifTrueActivities": [
