@@ -1,0 +1,256 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-FactalData"
+		},
+		"AzureDataLake_FinanceFiles_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'AzureDataLake_FinanceFiles'"
+		},
+		"AzureSqlDatabase_FactalData_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase_FactalData'"
+		},
+		"DynamicAzureSqlDatabase_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'DynamicAzureSqlDatabase'"
+		},
+		"DynamicSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'DynamicSqlServer'"
+		},
+		"sqldb_WBC_Data_Analytics_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'sqldb_WBC_Data_Analytics'"
+		},
+		"stwbcdataanalytics_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'stwbcdataanalytics'"
+		},
+		"tempFactalData_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'tempFactalData'"
+		},
+		"ADFControlAKV_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://kv-factaldata.vault.azure.net/"
+		},
+		"AzureDataLakeStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stdatateamshared01.dfs.core.windows.net"
+		},
+		"AzureDataLake_FinanceFiles_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://sacfactaldata01.dfs.core.windows.net"
+		},
+		"AzureStorageAccount_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stdatateamdev01.dfs.core.windows.net"
+		},
+		"DynamicDynamics_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "svc_D365MDP@mencap.org.uk"
+		},
+		"DynamicFileSystem_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "C:\\Users\\david\\OneDrive - Factal Data Limited\\Documents\\Finance"
+		},
+		"DynamicFileSystem_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "david@brinn.co.uk"
+		},
+		"DynamicRestService_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "@{linkedService().BaseURL}"
+		},
+		"DynamicRestService_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "@{linkedService().UserName}"
+		},
+		"DynamicSqlServer_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "RMS\\JS145336"
+		},
+		"SurfaceFiles_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "C:\\Users\\david\\OneDrive - Factal Data Limited\\Documents\\Finance"
+		},
+		"SurfaceFiles_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "david@brinn.co.uk"
+		},
+		"WebTable_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://www.caravanclub.co.uk/uk-holidays/uk-search-and-book/certificated-locations/search/?Name=&SiteContentId=&County=&Town=&Postcode=&LatLong=&p=1"
+		},
+		"kv_WBC_DataAnalytics_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "@{linkedService().KeyVaultName}"
+		},
+		"stwbcdataanalytics_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stwbcdataanalyticsprod.dfs.core.windows.net"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "adf-FactalData_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"AzureDataLake_FinanceFiles_accountKey": {
+						"value": "[parameters('AzureDataLake_FinanceFiles_accountKey')]"
+					},
+					"AzureSqlDatabase_FactalData_connectionString": {
+						"value": "[parameters('AzureSqlDatabase_FactalData_connectionString')]"
+					},
+					"DynamicAzureSqlDatabase_connectionString": {
+						"value": "[parameters('DynamicAzureSqlDatabase_connectionString')]"
+					},
+					"sqldb_WBC_Data_Analytics_connectionString": {
+						"value": "[parameters('sqldb_WBC_Data_Analytics_connectionString')]"
+					},
+					"stwbcdataanalytics_accountKey": {
+						"value": "[parameters('stwbcdataanalytics_accountKey')]"
+					},
+					"tempFactalData_connectionString": {
+						"value": "[parameters('tempFactalData_connectionString')]"
+					},
+					"ADFControlAKV_properties_typeProperties_baseUrl": {
+						"value": "[parameters('ADFControlAKV_properties_typeProperties_baseUrl')]"
+					},
+					"AzureDataLakeStorage_properties_typeProperties_url": {
+						"value": "[parameters('AzureDataLakeStorage_properties_typeProperties_url')]"
+					},
+					"AzureDataLake_FinanceFiles_properties_typeProperties_url": {
+						"value": "[parameters('AzureDataLake_FinanceFiles_properties_typeProperties_url')]"
+					},
+					"AzureStorageAccount_properties_typeProperties_url": {
+						"value": "[parameters('AzureStorageAccount_properties_typeProperties_url')]"
+					},
+					"WebTable_properties_typeProperties_url": {
+						"value": "[parameters('WebTable_properties_typeProperties_url')]"
+					},
+					"kv_WBC_DataAnalytics_properties_typeProperties_baseUrl": {
+						"value": "[parameters('kv_WBC_DataAnalytics_properties_typeProperties_baseUrl')]"
+					},
+					"stwbcdataanalytics_properties_typeProperties_url": {
+						"value": "[parameters('stwbcdataanalytics_properties_typeProperties_url')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "adf-FactalData_ArmTemplate_1",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_1.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"DynamicSqlServer_connectionString": {
+						"value": "[parameters('DynamicSqlServer_connectionString')]"
+					},
+					"DynamicDynamics_properties_typeProperties_username": {
+						"value": "[parameters('DynamicDynamics_properties_typeProperties_username')]"
+					},
+					"DynamicFileSystem_properties_typeProperties_host": {
+						"value": "[parameters('DynamicFileSystem_properties_typeProperties_host')]"
+					},
+					"DynamicFileSystem_properties_typeProperties_userId": {
+						"value": "[parameters('DynamicFileSystem_properties_typeProperties_userId')]"
+					},
+					"DynamicRestService_properties_typeProperties_url": {
+						"value": "[parameters('DynamicRestService_properties_typeProperties_url')]"
+					},
+					"DynamicRestService_properties_typeProperties_userName": {
+						"value": "[parameters('DynamicRestService_properties_typeProperties_userName')]"
+					},
+					"DynamicSqlServer_properties_typeProperties_userName": {
+						"value": "[parameters('DynamicSqlServer_properties_typeProperties_userName')]"
+					},
+					"SurfaceFiles_properties_typeProperties_host": {
+						"value": "[parameters('SurfaceFiles_properties_typeProperties_host')]"
+					},
+					"SurfaceFiles_properties_typeProperties_userId": {
+						"value": "[parameters('SurfaceFiles_properties_typeProperties_userId')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'adf-FactalData_ArmTemplate_0')]"
+			]
+		},
+		{
+			"name": "adf-FactalData_ArmTemplate_2",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_2.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'adf-FactalData_ArmTemplate_1')]"
+			]
+		},
+		{
+			"name": "adf-FactalData_ArmTemplate_3",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_3.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'adf-FactalData_ArmTemplate_2')]"
+			]
+		}
+	]
+}
