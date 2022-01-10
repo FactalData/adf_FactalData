@@ -1,0 +1,21 @@
+{
+	"name": "ContinuousRunPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "WaitForMe",
+				"description": "Wait for 10 seconds",
+				"type": "Wait",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 10
+				}
+			}
+		],
+		"folder": {
+			"name": "Dev"
+		},
+		"annotations": []
+	}
+}
