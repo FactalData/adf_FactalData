@@ -49,6 +49,47 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/DataLakeBinaryFile')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"DataLakeStorageAccount": {
+						"type": "string"
+					},
+					"DataLakeContainer": {
+						"type": "string"
+					},
+					"FileName": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "MyFinance"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().FileName",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().DataLakeContainer",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/DataLakeBinaryFolder')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -1822,6 +1863,7 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/DataLakeBinaryFolder')]",
+				"[concat(variables('factoryId'), '/datasets/DataLakeBinaryFile')]",
 				"[concat(variables('factoryId'), '/datasets/StorageAccountBinaryFile')]"
 			]
 		},
@@ -4348,466 +4390,6 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/DynamicSqlServer')]"
 			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/PowerBiRefreshMasterControl')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "LookUp to the Base Table",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "@pipeline().parameters.DynamicDatasets",
-									"type": "Expression"
-								},
-								"queryTimeout": "02:00:00",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "AzureSqlTable",
-								"type": "DatasetReference",
-								"parameters": {
-									"ServerName": {
-										"value": "@pipeline().parameters.ETLServerName",
-										"type": "Expression"
-									},
-									"DatabaseName": {
-										"value": "@pipeline().parameters.ETLDatabaseName",
-										"type": "Expression"
-									},
-									"SchemaName": {
-										"value": "@pipeline().parameters.ETLSchemaName",
-										"type": "Expression"
-									},
-									"TableName": {
-										"value": "@pipeline().parameters.ETLTableName",
-										"type": "Expression"
-									}
-								}
-							},
-							"firstRowOnly": false
-						}
-					},
-					{
-						"name": "Process Each Row",
-						"type": "ForEach",
-						"dependsOn": [
-							{
-								"activity": "LookUp to the Base Table",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@activity('LookUp to the Base Table').output.value",
-								"type": "Expression"
-							},
-							"isSequential": true,
-							"activities": [
-								{
-									"name": "Set variable DNS Name",
-									"type": "SetVariable",
-									"dependsOn": [],
-									"userProperties": [],
-									"typeProperties": {
-										"variableName": "vKeyVaultDNSName",
-										"value": {
-											"value": "@item().DNSName",
-											"type": "Expression"
-										}
-									}
-								},
-								{
-									"name": "Set variable TenantID",
-									"type": "SetVariable",
-									"dependsOn": [
-										{
-											"activity": "Set variable DNS Name",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										},
-										{
-											"activity": "Set variable SP ClientId",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										},
-										{
-											"activity": "Set variable DatasetID",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										},
-										{
-											"activity": "Set variable Secret",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										},
-										{
-											"activity": "Set variable WorkspaceID",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										},
-										{
-											"activity": "Set variable vScheduleDSR Time",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										}
-									],
-									"userProperties": [],
-									"typeProperties": {
-										"variableName": "vSecretVersion_TenantId",
-										"value": {
-											"value": "@item().TenantID",
-											"type": "Expression"
-										}
-									}
-								},
-								{
-									"name": "Set variable SP ClientId",
-									"type": "SetVariable",
-									"dependsOn": [],
-									"userProperties": [],
-									"typeProperties": {
-										"variableName": "vSecretVersion_SPClientId",
-										"value": {
-											"value": "@item().ClientID",
-											"type": "Expression"
-										}
-									}
-								},
-								{
-									"name": "Set variable DatasetID",
-									"type": "SetVariable",
-									"dependsOn": [],
-									"userProperties": [],
-									"typeProperties": {
-										"variableName": "vPBIDatasetId",
-										"value": {
-											"value": "@item().DatasetID",
-											"type": "Expression"
-										}
-									}
-								},
-								{
-									"name": "Set variable Secret",
-									"type": "SetVariable",
-									"dependsOn": [],
-									"userProperties": [],
-									"typeProperties": {
-										"variableName": "vSecretVersion_SPSecret",
-										"value": {
-											"value": "@item().ClientSecret",
-											"type": "Expression"
-										}
-									}
-								},
-								{
-									"name": "Set variable WorkspaceID",
-									"type": "SetVariable",
-									"dependsOn": [],
-									"userProperties": [],
-									"typeProperties": {
-										"variableName": "vPBIAppWorkspaceId",
-										"value": {
-											"value": "@item().WorkspaceID",
-											"type": "Expression"
-										}
-									}
-								},
-								{
-									"name": "Set variable vScheduleDSR Time",
-									"type": "SetVariable",
-									"dependsOn": [],
-									"userProperties": [],
-									"typeProperties": {
-										"variableName": "vScheduleDSRTime",
-										"value": {
-											"value": "@item().TimeHH",
-											"type": "Expression"
-										}
-									}
-								},
-								{
-									"name": "If the time is right",
-									"type": "IfCondition",
-									"dependsOn": [
-										{
-											"activity": "Set variable TenantID",
-											"dependencyConditions": [
-												"Succeeded"
-											]
-										}
-									],
-									"userProperties": [],
-									"typeProperties": {
-										"expression": {
-											"value": "@equals(formatDateTime(pipeline().TriggerTime,'HH'),variables('vScheduleDSRTime'))",
-											"type": "Expression"
-										},
-										"ifTrueActivities": [
-											{
-												"name": "Execute Refresh Child Pipeline",
-												"type": "ExecutePipeline",
-												"dependsOn": [],
-												"userProperties": [],
-												"typeProperties": {
-													"pipeline": {
-														"referenceName": "PowerBiRefreshDataSet",
-														"type": "PipelineReference"
-													},
-													"waitOnCompletion": true,
-													"parameters": {
-														"KeyVaultDNSName": {
-															"value": "@variables('vKeyVaultDNSName')",
-															"type": "Expression"
-														},
-														"SecretVersion_TenantId": {
-															"value": "@variables('vSecretVersion_TenantId')",
-															"type": "Expression"
-														},
-														"SecretVersion_SPClientId": {
-															"value": "@variables('vSecretVersion_SPClientId')",
-															"type": "Expression"
-														},
-														"SecretVersion_SPSecret": {
-															"value": "@variables('vSecretVersion_SPSecret')",
-															"type": "Expression"
-														},
-														"PBIAppWorkspaceId": {
-															"value": "@variables('vPBIAppWorkspaceId')",
-															"type": "Expression"
-														},
-														"PBIDatasetId": {
-															"value": "@variables('vPBIDatasetId')",
-															"type": "Expression"
-														}
-													}
-												}
-											},
-											{
-												"name": "Insert Status SUCCESS",
-												"type": "SqlServerStoredProcedure",
-												"dependsOn": [
-													{
-														"activity": "Execute Refresh Child Pipeline",
-														"dependencyConditions": [
-															"Succeeded"
-														]
-													}
-												],
-												"policy": {
-													"timeout": "7.00:00:00",
-													"retry": 0,
-													"retryIntervalInSeconds": 30,
-													"secureOutput": false,
-													"secureInput": false
-												},
-												"userProperties": [],
-												"typeProperties": {
-													"storedProcedureName": "[[ETL].[pr_PowerBiDatasetRefreshLog]",
-													"storedProcedureParameters": {
-														"WorkspaceID": {
-															"value": {
-																"value": "@variables('vPBIAppWorkspaceId')",
-																"type": "Expression"
-															},
-															"type": "String"
-														},
-														"DataSetID": {
-															"value": {
-																"value": "@variables('vPBIDatasetId')",
-																"type": "Expression"
-															},
-															"type": "String"
-														},
-														"Status": {
-															"value": {
-																"value": "SUCCEEDED",
-																"type": "Expression"
-															},
-															"type": "String"
-														}
-													}
-												},
-												"linkedServiceName": {
-													"referenceName": "DynamicAzureSqlDatabase",
-													"type": "LinkedServiceReference",
-													"parameters": {
-														"ServerName": {
-															"value": "@pipeline().parameters.ETLServerName",
-															"type": "Expression"
-														},
-														"DatabaseName": {
-															"value": "@pipeline().parameters.ETLDatabaseName",
-															"type": "Expression"
-														}
-													}
-												}
-											},
-											{
-												"name": "Insert Status FAILED",
-												"type": "SqlServerStoredProcedure",
-												"dependsOn": [
-													{
-														"activity": "Execute Refresh Child Pipeline",
-														"dependencyConditions": [
-															"Failed"
-														]
-													}
-												],
-												"policy": {
-													"timeout": "7.00:00:00",
-													"retry": 0,
-													"retryIntervalInSeconds": 30,
-													"secureOutput": false,
-													"secureInput": false
-												},
-												"userProperties": [],
-												"typeProperties": {
-													"storedProcedureName": "[[ETL].[pr_PowerBiDatasetRefreshLog]",
-													"storedProcedureParameters": {
-														"WorkspaceID": {
-															"value": {
-																"value": "@variables('vPBIAppWorkspaceId')",
-																"type": "Expression"
-															},
-															"type": "String"
-														},
-														"DataSetID": {
-															"value": {
-																"value": "@variables('vPBIDatasetId')",
-																"type": "Expression"
-															},
-															"type": "String"
-														},
-														"Status": {
-															"value": {
-																"value": "FAILED",
-																"type": "Expression"
-															},
-															"type": "String"
-														}
-													}
-												},
-												"linkedServiceName": {
-													"referenceName": "DynamicAzureSqlDatabase",
-													"type": "LinkedServiceReference",
-													"parameters": {
-														"ServerName": {
-															"value": "@pipeline().parameters.ETLServerName",
-															"type": "Expression"
-														},
-														"DatabaseName": {
-															"value": "@pipeline().parameters.ETLDatabaseName",
-															"type": "Expression"
-														}
-													}
-												}
-											}
-										]
-									}
-								}
-							]
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
-				"parameters": {
-					"SecretName_TenantId": {
-						"type": "String",
-						"defaultValue": "TenantId"
-					},
-					"SecretName_SPClientId": {
-						"type": "String",
-						"defaultValue": "ClientId"
-					},
-					"SecretName_SPSecret": {
-						"type": "String",
-						"defaultValue": "ClientSecret"
-					},
-					"DynamicDatasets": {
-						"type": "string",
-						"defaultValue": " SELECT [ID], [DNSName], [TenantID], [ClientID], [ClientSecret], [WorkspaceID], [DatasetID], [TimeHH], [Active], [DateCreated]  FROM [ADF].[PowerBiDatasetRefresh] WHERE Active = 1"
-					},
-					"ETLServerName": {
-						"type": "string",
-						"defaultValue": "srv-factaldata-01.database.windows.net"
-					},
-					"ETLDatabaseName": {
-						"type": "string",
-						"defaultValue": "db-factaldata-01-dev"
-					},
-					"ETLSchemaName": {
-						"type": "string",
-						"defaultValue": "ADF"
-					},
-					"ETLTableName": {
-						"type": "string",
-						"defaultValue": "PowerBiDatasetRefresh"
-					}
-				},
-				"variables": {
-					"RefreshStatus": {
-						"type": "String",
-						"defaultValue": "Unknown"
-					},
-					"vSecretVersion_TenantId": {
-						"type": "String"
-					},
-					"vSecretVersion_SPClientId": {
-						"type": "String"
-					},
-					"vSecretVersion_SPSecret": {
-						"type": "String"
-					},
-					"vPBIAppWorkspaceId": {
-						"type": "String"
-					},
-					"vPBIDatasetId": {
-						"type": "String"
-					},
-					"vScheduleDSRTime": {
-						"type": "String"
-					},
-					"vexecutiontimeinHH": {
-						"type": "String"
-					},
-					"vKeyVaultDNSName": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "PowerBi"
-				},
-				"annotations": [],
-				"lastPublishTime": "2021-08-09T14:29:28Z"
-			},
-			"dependsOn": []
 		}
 	]
 }

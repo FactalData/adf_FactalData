@@ -13,6 +13,1181 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/MasterControl - AzureSQL')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Control Pipeline to determine Logical Group and order",
+				"activities": [
+					{
+						"name": "Lookup Groups Stored Procs",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "ForEach CopyData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "ForEach CopyData - Query",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "ForEach CopyFile - Excel",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "ForEach CopyDynamics",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "ForEach CopyFileSystem",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "@concat(variables('DynamicStatement'), ' AND TaskType = ''StoredProc''')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference",
+								"parameters": {
+									"ServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									},
+									"SchemaName": {
+										"value": "@pipeline().parameters.ETLSchemaName",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@pipeline().parameters.ETLTableName",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach Group in DynamicPipelineConfig Stored Proc",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup Groups Stored Procs",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup Groups Stored Procs').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "If there are no Stored Procs",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@empty(activity('Lookup Groups Stored Procs').output)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Execute Dynamic Execute Stored Proc",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "ExecuteAzureSQLStoredProc",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"ServerName": {
+															"value": "@Item().StoredProcServerName",
+															"type": "Expression"
+														},
+														"DatabaseName": {
+															"value": "@Item().StoredProcDatabaseName",
+															"type": "Expression"
+														},
+														"ETLServerName": {
+															"value": "@pipeline().parameters.ETLServerName",
+															"type": "Expression"
+														},
+														"ETLDatabaseName": {
+															"value": "@pipeline().parameters.ETLDatabaseName",
+															"type": "Expression"
+														},
+														"ETLSchemaName": {
+															"value": "@pipeline().parameters.ETLSchemaName",
+															"type": "Expression"
+														},
+														"ETLTableName": {
+															"value": "@pipeline().parameters.ETLTableName",
+															"type": "Expression"
+														},
+														"LogicalGroup": {
+															"value": "@Item().LogicalGroup",
+															"type": "Expression"
+														},
+														"MasterRunId": {
+															"value": "@variables('MasterRunId')",
+															"type": "Expression"
+														},
+														"TriggerName": {
+															"value": "@variables('TriggerName')",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Lookup CopyData",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Set DynamicStatement",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "@concat(variables('DynamicStatement'), ' AND TaskType = ''CopyData''', ' AND (UseQuery = 0 OR UseQuery IS NULL)')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference",
+								"parameters": {
+									"ServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									},
+									"SchemaName": {
+										"value": "@pipeline().parameters.ETLSchemaName",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@pipeline().parameters.ETLTableName",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach CopyData",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup CopyData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup CopyData').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "If there is nothing to Copy",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@empty(activity('Lookup CopyData').output)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "CopyAzureSQLToAzureSQL",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "CopyAzureSQLToAzureSQL",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"ETLServerName": {
+															"value": "@pipeline().parameters.ETLServerName",
+															"type": "Expression"
+														},
+														"ETLDatabaseName": {
+															"value": "@pipeline().parameters.ETLDatabaseName",
+															"type": "Expression"
+														},
+														"ETLSchemaName": {
+															"value": "@pipeline().parameters.ETLSchemaName",
+															"type": "Expression"
+														},
+														"ETLTableName": {
+															"value": "@pipeline().parameters.ETLTableName",
+															"type": "Expression"
+														},
+														"LogicalGroup": {
+															"value": "@Item().LogicalGroup",
+															"type": "Expression"
+														},
+														"MasterRunId": {
+															"value": "@variables('MasterRunId')",
+															"type": "Expression"
+														},
+														"TriggerName": {
+															"value": "@variables('TriggerName')",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Set PipelineName",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Set StartTime",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "PipelineName",
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Update Pipeline LogInfo",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Set EndTime",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[ADF].[pr_InsertPipelineLogInfo]",
+							"storedProcedureParameters": {
+								"PipelineRunId": {
+									"value": {
+										"value": "@variables('MasterRunId')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineStartTime": {
+									"value": {
+										"value": "@variables('PipelineStartTime')",
+										"type": "Expression"
+									},
+									"type": "Datetime"
+								},
+								"PipelineEndTime": {
+									"value": {
+										"value": "@variables('PipelineEndTime')",
+										"type": "Expression"
+									},
+									"type": "Datetime"
+								},
+								"DataFactoryName": {
+									"value": {
+										"value": "@pipeline().DataFactory",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"TriggerName": {
+									"value": {
+										"value": "@variables('TriggerName')",
+										"type": "Expression"
+									},
+									"type": "String"
+								},
+								"PipelineName": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "DynamicAzureSqlDatabase",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"ServerName": {
+									"value": "@pipeline().parameters.ETLServerName",
+									"type": "Expression"
+								},
+								"DatabaseName": {
+									"value": "@pipeline().parameters.ETLDatabaseName",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "Set StartTime",
+						"description": "Time",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "PipelineStartTime",
+							"value": {
+								"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Set EndTime",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "ForEach Group in DynamicPipelineConfig Stored Proc",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "PipelineEndTime",
+							"value": {
+								"value": "@convertFromUtc(utcnow(), 'GMT Standard Time')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Lookup CopyData - Query",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Set DynamicStatement",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "@concat(variables('DynamicStatement'), ' AND TaskType = ''CopyData''', ' AND UseQuery = 1')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference",
+								"parameters": {
+									"ServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									},
+									"SchemaName": {
+										"value": "@pipeline().parameters.ETLSchemaName",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@pipeline().parameters.ETLTableName",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach CopyData - Query",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup CopyData - Query",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup CopyData - Query').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "If there is nothing to Copy - Query",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@empty(activity('Lookup CopyData - Query').output)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Execute Dynamic Copy Data - Query",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "CopyAzureSQLQueryToAzureSQL",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"ETLServerName": {
+															"value": "@pipeline().parameters.ETLServerName",
+															"type": "Expression"
+														},
+														"ETLDatabaseName": {
+															"value": "@pipeline().parameters.ETLDatabaseName",
+															"type": "Expression"
+														},
+														"ETLSchemaName": {
+															"value": "@pipeline().parameters.ETLSchemaName",
+															"type": "Expression"
+														},
+														"ETLTableName": {
+															"value": "@pipeline().parameters.ETLTableName",
+															"type": "Expression"
+														},
+														"LogicalGroup": {
+															"value": "@Item().LogicalGroup",
+															"type": "Expression"
+														},
+														"MasterRunId": {
+															"value": "@variables('MasterRunId')",
+															"type": "Expression"
+														},
+														"TriggerName": {
+															"value": "@variables('TriggerName')",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Lookup CopyFile - Excel",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Set DynamicStatement",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "@concat(variables('DynamicStatement'), ' AND TaskType = ''CopyFile'' AND FileExtension LIKE ''%xls%''')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference",
+								"parameters": {
+									"ServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									},
+									"SchemaName": {
+										"value": "@pipeline().parameters.ETLSchemaName",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@pipeline().parameters.ETLTableName",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach CopyFile - Excel",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup CopyFile - Excel",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup CopyFile - Excel').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "If there is nothing to Copy - Excel File",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@empty(activity('Lookup CopyFile - Excel').output)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Execute Dynamic Copy Data - Excel File",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "CopyExcelFileToAzureSQL",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"ETLServerName": {
+															"value": "@pipeline().parameters.ETLServerName",
+															"type": "Expression"
+														},
+														"ETLDatabaseName": {
+															"value": "@pipeline().parameters.ETLDatabaseName",
+															"type": "Expression"
+														},
+														"ETLSchemaName": {
+															"value": "@pipeline().parameters.ETLSchemaName",
+															"type": "Expression"
+														},
+														"ETLTableName": {
+															"value": "@pipeline().parameters.ETLTableName",
+															"type": "Expression"
+														},
+														"LogicalGroup": {
+															"value": "@Item().LogicalGroup",
+															"type": "Expression"
+														},
+														"MasterRunId": {
+															"value": "@variables('MasterRunId')",
+															"type": "Expression"
+														},
+														"TriggerName": {
+															"value": "@variables('TriggerName')",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Set DynamicStatement",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Set PipelineName",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "If TriggerName is not set",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "If MasterRunId is not set",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "DynamicStatement",
+							"value": {
+								"value": "@concat('SELECT DISTINCT ',pipeline().parameters.LogicalGroup, ' AS LogicalGroup, [TaskType], [StoredProcServerName], [StoredProcDatabaseName] FROM [ADF].[DynamicPipelineConfig] WHERE [Active] = 1 AND [LogicalGroup] = ', pipeline().parameters.LogicalGroup)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "If TriggerName is not set",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Set StartTime",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@empty(pipeline().parameters.TriggerName)",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "Set TriggerName False",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "TriggerName",
+										"value": {
+											"value": "@pipeline().parameters.TriggerName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"ifTrueActivities": [
+								{
+									"name": "Set TriggerName True",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "TriggerName",
+										"value": {
+											"value": "@pipeline().TriggerName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "If MasterRunId is not set",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Set StartTime",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@empty(pipeline().parameters.MasterRunId)",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "Set MasterRunId False",
+									"description": "",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "MasterRunId",
+										"value": {
+											"value": "@pipeline().parameters.MasterRunId",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"ifTrueActivities": [
+								{
+									"name": "Set MasterRunId True",
+									"description": "",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "MasterRunId",
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Lookup CopyDynamics",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Set DynamicStatement",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "@concat(variables('DynamicStatement'), ' AND TaskType = ''CopyDynamics''')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference",
+								"parameters": {
+									"ServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									},
+									"SchemaName": {
+										"value": "@pipeline().parameters.ETLSchemaName",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@pipeline().parameters.ETLTableName",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach CopyDynamics",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup CopyDynamics",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup CopyDynamics').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "If there is nothing to Copy - Excel File_copy1",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@empty(activity('Lookup CopyDynamics').output)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Execute ADF Dynamic Copy Dynamics Entity",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "CopyDynamicsEntityToAzureSQL",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"ETLServerName": {
+															"value": "@pipeline().parameters.ETLServerName",
+															"type": "Expression"
+														},
+														"ETLDatabaseName": {
+															"value": "@pipeline().parameters.ETLDatabaseName",
+															"type": "Expression"
+														},
+														"ETLSchemaName": {
+															"value": "@pipeline().parameters.ETLSchemaName",
+															"type": "Expression"
+														},
+														"ETLTableName": {
+															"value": "@pipeline().parameters.ETLTableName",
+															"type": "Expression"
+														},
+														"LogicalGroup": {
+															"value": "@Item().LogicalGroup",
+															"type": "Expression"
+														},
+														"MasterRunId": {
+															"value": "@variables('MasterRunId')",
+															"type": "Expression"
+														},
+														"TriggerName": {
+															"value": "@variables('TriggerName')",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Lookup CopyFileSystem",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Set DynamicStatement",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "@concat(variables('DynamicStatement'), ' AND TaskType = ''CopyFileSystem'' AND FileExtension IN (''csv'',''txt'')')",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference",
+								"parameters": {
+									"ServerName": {
+										"value": "@pipeline().parameters.ETLServerName",
+										"type": "Expression"
+									},
+									"DatabaseName": {
+										"value": "@pipeline().parameters.ETLDatabaseName",
+										"type": "Expression"
+									},
+									"SchemaName": {
+										"value": "@pipeline().parameters.ETLSchemaName",
+										"type": "Expression"
+									},
+									"TableName": {
+										"value": "@pipeline().parameters.ETLTableName",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach CopyFileSystem",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup CopyFileSystem",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup CopyFileSystem').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "If there is nothing to Copy - CSV_copy1",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@empty(activity('Lookup CopyFileSystem').output)",
+											"type": "Expression"
+										},
+										"ifFalseActivities": [
+											{
+												"name": "Execute Dynamic Copy FileSystem - File",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "CopyFileSystemDelimetedFileToAzureSQL",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"ETLServerName": {
+															"value": "@pipeline().parameters.ETLServerName",
+															"type": "Expression"
+														},
+														"ETLDatabaseName": {
+															"value": "@pipeline().parameters.ETLDatabaseName",
+															"type": "Expression"
+														},
+														"ETLSchemaName": {
+															"value": "@pipeline().parameters.ETLSchemaName",
+															"type": "Expression"
+														},
+														"ETLTableName": {
+															"value": "@pipeline().parameters.ETLTableName",
+															"type": "Expression"
+														},
+														"LogicalGroup": {
+															"value": "@Item().LogicalGroup",
+															"type": "Expression"
+														},
+														"MasterRunId": {
+															"value": "@variables('MasterRunId')",
+															"type": "Expression"
+														},
+														"TriggerName": {
+															"value": "@variables('TriggerName')",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"ETLServerName": {
+						"type": "string",
+						"defaultValue": "sql-factaldata-01.database.windows.net"
+					},
+					"ETLDatabaseName": {
+						"type": "string",
+						"defaultValue": "sqldb-factaldata-02"
+					},
+					"ETLSchemaName": {
+						"type": "string",
+						"defaultValue": "ADF"
+					},
+					"ETLTableName": {
+						"type": "string",
+						"defaultValue": "DynamicPipelineConfig"
+					},
+					"DynamicPipelineConfig": {
+						"type": "string",
+						"defaultValue": "SELECT DISTINCT [LogicalGroup], [TaskType] FROM [ADF].[DynamicPipelineConfig] WHERE Active = 1"
+					},
+					"LogicalGroup": {
+						"type": "string",
+						"defaultValue": "-9999"
+					},
+					"TriggerName": {
+						"type": "string"
+					},
+					"MasterRunId": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"LogicalGroup": {
+						"type": "String"
+					},
+					"TaskType": {
+						"type": "String"
+					},
+					"MasterRunId": {
+						"type": "String"
+					},
+					"DynamicStatement": {
+						"type": "String"
+					},
+					"PipelineName": {
+						"type": "String"
+					},
+					"TriggerName": {
+						"type": "String"
+					},
+					"PipelineStartTime": {
+						"type": "String"
+					},
+					"PipelineEndTime": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "ADF Framework"
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-08-09T15:19:09Z"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/MasterControl - DataLake')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -1412,7 +2587,9 @@
 				"annotations": [],
 				"lastPublishTime": "2021-08-09T15:19:10Z"
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/MasterControl - AzureSQL')]"
+			]
 		}
 	]
 }
