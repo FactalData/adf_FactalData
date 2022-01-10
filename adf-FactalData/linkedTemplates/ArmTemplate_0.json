@@ -139,11 +139,36 @@
 						"typeProperties": {
 							"waitTimeInSeconds": 10
 						}
+					},
+					{
+						"name": "Set the MomentInTime variable",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "WaitForMe",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "MomentInTime",
+							"value": {
+								"value": "@convertTimeZone(utcnow(),'UTC','Greenwich Mean Time')",
+								"type": "Expression"
+							}
+						}
 					}
 				],
 				"policy": {
 					"elapsedTimeMetric": {},
 					"cancelAfter": {}
+				},
+				"variables": {
+					"MomentInTime": {
+						"type": "String"
+					}
 				},
 				"folder": {
 					"name": "Dev"
