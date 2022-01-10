@@ -42,7 +42,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"expression": {
-						"value": "@and(greaterOrEquals(variables('TimeNow'), variables('WindowStart')),lessOrEquals(variables('TimeNow'), variables('WindowEnd')))",
+						"value": "@greaterOrEquals(variables('TimeNow'), variables('WindowStart'))",
 						"type": "Expression"
 					},
 					"ifTrueActivities": [
