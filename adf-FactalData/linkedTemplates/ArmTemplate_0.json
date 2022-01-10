@@ -139,12 +139,6 @@
 								"dependencyConditions": [
 									"Succeeded"
 								]
-							},
-							{
-								"activity": "Set WindowEnd variable",
-								"dependencyConditions": [
-									"Succeeded"
-								]
 							}
 						],
 						"userProperties": [],
@@ -170,7 +164,7 @@
 						"userProperties": [],
 						"typeProperties": {
 							"expression": {
-								"value": "@And(\ngreater(variables('TimeNow'), variables('WindowStart')),\nless(variables('TimeNow'), variables('WindowEnd'))\n)",
+								"value": "@greater(variables('TimeNow'), variables('WindowStart'))",
 								"type": "Expression"
 							},
 							"ifTrueActivities": [
@@ -199,19 +193,6 @@
 								"type": "Expression"
 							}
 						}
-					},
-					{
-						"name": "Set WindowEnd variable",
-						"type": "SetVariable",
-						"dependsOn": [],
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "WindowEnd",
-							"value": {
-								"value": "2022-01-10T15:00:00.0000000Z",
-								"type": "Expression"
-							}
-						}
 					}
 				],
 				"policy": {
@@ -223,9 +204,6 @@
 						"type": "String"
 					},
 					"WindowStart": {
-						"type": "String"
-					},
-					"WindowEnd": {
 						"type": "String"
 					}
 				},
