@@ -27,7 +27,7 @@
 				"typeProperties": {
 					"variableName": "MomentInTime",
 					"value": {
-						"value": "@convertTimeZone(utcnow(),'UTC','Greenwich Mean Time')",
+						"value": "@convertTimeZone(utcnow(),'UTC','GMT Standard Time')",
 						"type": "Expression"
 					}
 				}
